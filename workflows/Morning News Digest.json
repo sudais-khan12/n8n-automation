@@ -1,0 +1,278 @@
+{
+  "name": "Morning News Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://feeds.feedburner.com/TechCrunch",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [224, -208],
+      "id": "a7fe5eb7-37e8-4ac0-ab0a-da27215fe46c",
+      "name": "Tech News"
+    },
+    {
+      "parameters": {
+        "url": "https://www.dawn.com/feeds/home",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [224, -16],
+      "id": "fed582ca-f564-4053-968e-9a0ddecab1f3",
+      "name": "Dawn News"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.feedburner.com/variety/headlines",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [224, 176],
+      "id": "bac73a84-606b-4146-83ff-33cd95c73533",
+      "name": "Entertainment News"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [448, -16],
+      "id": "68f2c75c-12df-466d-a8d7-35f45e98a9c8",
+      "name": "Parse Tech"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [448, 176],
+      "id": "699c4096-937f-4493-ac0d-1f2d245a555e",
+      "name": "Parse Entertainment"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [672, -32],
+      "id": "377dd2d4-b6d2-4eb9-a5c2-594e5e1512f3",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/1406715687552155739/W9HzhK8TlEEeTDLfJShU51ifZcsLvUuGnAEkqAtT-NNwg1Hc_1Fl8WPUSdJO59SPhC15",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, -16],
+      "id": "0012c7c1-a3af-421b-afe8-547372fa768e",
+      "name": "Discord Channel"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all items from the merge\nconst allItems = $input.all();\n\n// Let's see the actual structure first\nconsole.log('First item structure:', JSON.stringify(allItems[0]?.json?.rss?.channel?.item?.[0], null, 2));\n\nconst articles = [];\n\nfor (const source of allItems) {\n  const items = source.json?.rss?.channel?.item || [];\n  \n  for (const item of items.slice(0, 3)) { // Just first 3 from each source\n    // Try different possible structures\n    let title = item.title;\n    let link = item.link;\n    \n    // Handle different RSS formats\n    if (Array.isArray(title)) title = title[0];\n    if (typeof title === 'object') title = title._ || title.$t || title.content;\n    \n    if (Array.isArray(link)) link = link[0];\n    if (typeof link === 'object') link = link._ || link.$t || link.href;\n    \n    articles.push({\n      title: title || 'No title',\n      link: link || '#',\n      rawItem: item // For debugging\n    });\n  }\n}\n\n// Simple message for now\nlet discordMessage = \"🌅 **Good morning! Here's what's happening:**\\n\\n\";\n\narticles.forEach(article => {\n  discordMessage += `📰 ${article.title}\\n[Read more →](${article.link})\\n\\n`;\n});\n\nreturn [{ json: { message: discordMessage, debug: articles } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [896, -16],
+      "id": "90b4aeee-ab73-4399-b493-ab8404858f3e",
+      "name": "Format News"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, -16],
+      "id": "34b01292-1a9e-4ca1-bc83-58dc58797321",
+      "name": "Test News"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [448, -208],
+      "id": "ee7864e4-6e6a-4a5b-95d0-084c64aa2945",
+      "name": "Parse Pakistan"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Dawn News": {
+      "main": [
+        [
+          {
+            "node": "Parse Tech",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Parse Pakistan",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Parse Entertainment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tech News": {
+      "main": [
+        [
+          {
+            "node": "Parse Pakistan",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Parse Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Tech": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Entertainment News": {
+      "main": [
+        [
+          {
+            "node": "Parse Entertainment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Parse Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Entertainment": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Format News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format News": {
+      "main": [
+        [
+          {
+            "node": "Discord Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test News": {
+      "main": [
+        [
+          {
+            "node": "Dawn News",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tech News",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Entertainment News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Pakistan": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "34fa4e4c-253f-4b8b-9231-bb8c2bf59292",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "76eed999aaf17d38ef1f3cacbcb4522545df60279612410d09c9a8d0d8dd7687"
+  },
+  "id": "imYjn3DxpLdQjCHU",
+  "tags": []
+}
